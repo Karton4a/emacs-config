@@ -1,0 +1,355 @@
+;;; prykra-c.el --- Brief description -*- lexical-binding: t; -*-
+
+;; Author: Karton <anpaschenko@gmail.com>
+;; Version: 0.1
+;; Package-Requires: ((emacs "27.1"))
+;; Keywords: convenience, tools
+;; URL: https://github.com/yourname/my-package
+
+;;; Commentary:
+
+;; This package provides ...
+
+;;; Code:
+
+(defun prykra-c/alphabetic-char-p (char)
+  (eq (char-syntax char) ?w)) ;; ?w = word constituent
+
+(defun prykra-c/is-whitespace (char)
+  (char-equal char ?\s))
+
+(defun prykra-c/get-next-element (array index)
+  (when (< (1+ index) (length array))
+    (aref array (1+ index))))
+
+(defun prykra-c/get-previous-element (array index)
+  (when (>= (- index 1) 0)
+    (aref array (- index 1))))
+
+(defun prykra-c/get-first-element (list)
+  (car list))
+
+(defun prykra-c/is-unary-p (array index unary-symbols-list)
+  (when (member (cdr (aref array index)) unary-symbols-list)
+    (let ((local-index (- index 1)))
+      (while (and (>= local-index 0) (eq (car (aref array local-index)) 'WHITESPACES))
+        (setq local-index (- local-index 1)))
+      (or (= local-index -1) (eq (car (aref array local-index)) 'OPERATOR_SYMBOLS) (string= (cdr (aref array local-index)) "(")))))
+
+(setq prykra-c/operators-symbols (list ?+ ?- ?* ?/ ?= ?: ?? ?~ ?! ?> ?< ?| ?& ?^ ?%))
+
+(setq prykra-c/two-chars-operators (list "++" "--" "*=" "+=" "/=" "-=" "&=" "|=" "^=" "<=" ">=" "!=" "~=" "==" ">>" "<<" "&&" "||" "->"))
+(setq prykra-c/three-chars-operators (list ">>=" "<<="))
+
+(setq prykra-c/one-line-comment "//")
+(setq prykra-c/multiline-comment '("/*" . "*/"))
+
+
+(defun prykra-c/tokenize-string (string)
+  (let ((string-length (length string))
+        (index 0)
+        (tokens-list nil))
+
+    (while (< index string-length)
+      (cond ((prykra-c/is-whitespace (aref string index))
+             (let ((num-spaces 0))
+               (while (and (< index string-length) (prykra-c/is-whitespace (aref string index)))
+                 (setq num-spaces (1+ num-spaces))
+                 (setq index (1+ index)))
+               (push (cons 'WHITESPACES num-spaces) tokens-list)))
+
+            ((char-equal (aref string index) ?/)
+             (let ((current-char (aref string index)))
+               (if (< (1+ index) string-length)
+                   (let* ((next-char (aref string (1+ index)))
+                          (two-char-operator (concat (char-to-string current-char) (char-to-string next-char))))
+                     (cond
+                      ((string= two-char-operator prykra-c/one-line-comment)
+                       (let ((current-token ""))
+                         (while (< index string-length)
+                           (setq current-token (concat current-token (char-to-string (aref string index))))
+                           (setq index (1+ index)))
+                         (push (cons 'LITERAL current-token) tokens-list)))
+                      ((string= two-char-operator (car prykra-c/multiline-comment))
+                       (let ((current-token "/"))
+                         (setq index (1+ index))
+                         (while (and (< index string-length) (not (and (eq (prykra-c/get-next-element string index) ?*) (eq (prykra-c/get-next-element string (1+ index)) ?/))))
+                           (setq current-token (concat current-token (char-to-string (aref string index))))
+                           (setq index (1+ index)))
+                         (unless (>= index string-length)
+                           (setq current-token (concat current-token (char-to-string (aref string index)) "*/"))
+                           (setq index (+ index 3)))
+                         (push (cons 'LITERAL current-token) tokens-list)))
+                      ((member two-char-operator prykra-c/two-chars-operators)
+                       (push (cons 'OPERATOR_SYMBOLS two-char-operator) tokens-list)
+                       (setq index (+ index 2)))
+                      (t
+                       (push (cons 'OPERATOR_SYMBOLS "/") tokens-list)
+                       (setq index (1+ index)))))
+                 (progn
+                   (push (cons 'OPERATOR_SYMBOLS "/") tokens-list)
+                   (setq index (1+ index))))))
+            ((member (aref string index) prykra-c/operators-symbols)
+             (let* ((current-token "")
+                    (current-character (aref string index))
+                    (second-character (prykra-c/get-next-element string index))
+                    (third-character (prykra-c/get-next-element string (1+ index)))
+                    (one-char-token (char-to-string current-character))
+                    (two-chars-token (concat one-char-token (if second-character (char-to-string second-character) "")))
+                    (three-chars-token (concat two-chars-token (if third-character (char-to-string third-character) ""))))
+               (cond
+                ((member three-chars-token prykra-c/three-chars-operators)
+                 (push (cons 'OPERATOR_SYMBOLS three-chars-token) tokens-list)
+                 (setq index (+ index 3)))
+                ((member two-chars-token prykra-c/two-chars-operators)
+                 (push (cons 'OPERATOR_SYMBOLS two-chars-token) tokens-list)
+                 (setq index (+ index 2)))
+                (t
+                 (push (cons 'OPERATOR_SYMBOLS one-char-token) tokens-list)
+                 (setq index (+ index 1))))))
+            
+            ((char-equal (aref string index) ?\")
+             (let ((current-token (char-to-string (aref string index))))
+               (setq index (1+ index))
+               (while (and (< index string-length) (not (char-equal (aref string index) ?\")))
+                 (setq current-token (concat current-token (char-to-string (aref string index))))
+                 (setq index (1+ index)))
+               (when (< index string-length)
+                 (setq current-token (concat current-token (char-to-string (aref string index))))
+                 (setq index (1+ index)))
+               (push (cons 'LITERAL current-token) tokens-list)))
+            ((or (char-equal (aref string index) ?\( ) (char-equal (aref string index) ?\) ))
+             (push (cons 'BRACE (char-to-string (aref string index))) tokens-list)
+             (setq index (1+ index)))
+            ((or (char-equal (aref string index) ?\{ ) (char-equal (aref string index) ?\} ))
+             (push (cons 'CURLY_BRACE (char-to-string (aref string index))) tokens-list)
+             (setq index (1+ index)))
+            ((prykra-c/alphabetic-char-p (aref string index))
+             (let ((current-token ""))
+               (while (and (< index string-length) (prykra-c/alphabetic-char-p (aref string index)))
+                 (setq current-token (concat current-token (char-to-string (aref string index))))
+                 (setq index (1+ index)))
+               (push (cons 'LITERAL current-token) tokens-list)))
+            ((char-equal (aref string index) ?\;)
+             (push (cons 'SEMICOLON (char-to-string (aref string index))) tokens-list)
+             (setq index (1+ index)))
+            ((char-equal (aref string index) ?,)
+             (push (cons 'COMMA (char-to-string (aref string index))) tokens-list)
+             (setq index (1+ index)))
+            (t
+             (push (cons 'UNKOWN_TOKEN (char-to-string (aref string index))) tokens-list)
+             (setq index (1+ index)))))
+    (nreverse tokens-list)))
+
+
+;; (setq operators-list-old '("+" "-" "*" "/" "?" ":" "<<" ">>" "|" "||" "&&" "&" "+=" "-=" "*=" "/=" "<<=" ">>=" "|=" "&=" "~=" "<" ">" ">=" "<=" "!=" "==" "=" "^"))
+(setq prykra-c/exclude-spacing '("++" "--" "->"))
+(setq prykra-c/operators-list (cl-set-difference (append (mapcar #'char-to-string prykra-c/operators-symbols) prykra-c/two-chars-operators prykra-c/three-chars-operators) prykra-c/exclude-spacing :test #'string=))
+(setq prykra-c/unary-operators-list '("+" "-" "*" "&" "~" "!"))
+(setq prykra-c/control-keywords-list '("if" "while" "for" "switch"))
+
+(defun prykra-c/add-missing-token-spaces (token-list)
+  (when token-list
+    (let* ((token-array (vconcat token-list))
+           (token-count (length token-array))
+           (index 0)
+           (token-list-with-spaces nil))
+      (while (< index token-count)
+        (let* ((current-token (aref token-array index))
+               (token-type (car current-token))
+               (token-value (cdr current-token)))
+          (cond ((and (eq token-type 'OPERATOR_SYMBOLS) (not (prykra-c/is-unary-p token-array index prykra-c/unary-operators-list)))
+                 (cond ((string= token-value "*")
+                        (if (and
+                             (or
+                              (eq (car (prykra-c/get-next-element token-array index)) 'LITERAL)
+                              (and (eq (car (prykra-c/get-next-element token-array index)) 'BRACE) (string= (cdr (prykra-c/get-next-element token-array index)) "("))
+                              (and (eq (car (prykra-c/get-next-element token-array index)) 'OPERATOR_SYMBOLS) (prykra-c/is-unary-p token-array (1+ index) prykra-c/unary-operators-list)))
+                             (or (eq (car (prykra-c/get-previous-element token-array index)) 'LITERAL) (eq (car (prykra-c/get-previous-element token-array index)) 'BRACE)))
+                            (progn
+                              (unless (eq (car (prykra-c/get-first-element token-list-with-spaces)) 'WHITESPACES)
+                                (push (cons 'WHITESPACES 1) token-list-with-spaces))
+                              (push current-token token-list-with-spaces)
+                              (push (cons 'WHITESPACES 1) token-list-with-spaces))
+                          (push current-token token-list-with-spaces)))
+                       ((member token-value prykra-c/operators-list)
+                        (progn
+                          (unless (and (prykra-c/get-first-element token-list-with-spaces) (eq (car (prykra-c/get-first-element token-list-with-spaces)) 'WHITESPACES))
+                            (push (cons 'WHITESPACES 1) token-list-with-spaces))
+                          (push current-token token-list-with-spaces)
+                          (unless (and (prykra-c/get-next-element token-array index) (eq (car (prykra-c/get-next-element token-array index)) 'WHITESPACES))
+                            (push (cons 'WHITESPACES 1) token-list-with-spaces))))
+                       (t (push current-token token-list-with-spaces))))
+                ((and (eq token-type 'BRACE) (string= token-value ")"))
+                 (push current-token token-list-with-spaces)
+                 (unless (or
+                          (not (prykra-c/get-next-element token-array index))
+                          (eq (car (prykra-c/get-next-element token-array index)) 'SEMICOLON)
+                          (eq (car (prykra-c/get-next-element token-array index)) 'WHITESPACES)
+                          (eq (car (prykra-c/get-next-element token-array index)) 'BRACE))
+                   (push (cons 'WHITESPACES 1) token-list-with-spaces)))
+                ((and (eq token-type 'BRACE) (string= token-value "("))
+                 (let ((previous-token (prykra-c/get-first-element token-list-with-spaces)))
+                   (when (and (eq (car previous-token) 'LITERAL) (member (cdr previous-token) prykra-c/control-keywords-list))
+                     (push (cons 'WHITESPACES 1) token-list-with-spaces))
+                   (push current-token token-list-with-spaces)))
+                ((eq token-type 'CURLY_BRACE)
+                 (unless (eq (car (prykra-c/get-first-element token-list-with-spaces)) 'WHITESPACES)
+                   (push (cons 'WHITESPACES 1) token-list-with-spaces))
+                 (push current-token token-list-with-spaces)
+                 (unless (or
+                          (not (prykra-c/get-next-element token-array index))
+                          (eq (car (prykra-c/get-next-element token-array index)) 'SEMICOLON)
+                          (eq (car (prykra-c/get-next-element token-array index)) 'WHITESPACES))
+                   (print (prykra-c/get-next-element token-array index))
+                   (push (cons 'WHITESPACES 1) token-list-with-spaces)))
+                ((eq token-type 'SEMICOLON)
+                 (push current-token token-list-with-spaces)
+                 (unless (or
+                          (not (prykra-c/get-next-element token-array index))
+                          (eq (car (prykra-c/get-next-element token-array index)) 'SEMICOLON)
+                          (eq (car (prykra-c/get-next-element token-array index)) 'BRACE)
+                          (eq (car (prykra-c/get-next-element token-array index)) 'WHITESPACES))
+                   (push (cons 'WHITESPACES 1) token-list-with-spaces)))
+                ((eq token-type 'COMMA)
+                 (push current-token token-list-with-spaces)
+                 (unless (or
+                          (not (prykra-c/get-next-element token-array index))
+                          (eq (car (prykra-c/get-next-element token-array index)) 'SEMICOLON)
+                          (eq (car (prykra-c/get-next-element token-array index)) 'WHITESPACES))
+                   (push (cons 'WHITESPACES 1) token-list-with-spaces)))
+                (t (push current-token token-list-with-spaces))))
+        (setq index (1+ index)))
+      (nreverse token-list-with-spaces))
+    ))
+
+
+(defun prykra-c/form-string (list)
+  (mapconcat (lambda (x) (if (eq (car x) 'WHITESPACES) (make-string (cdr x) ?\s) (cdr x))) list ""))
+
+
+(defun add-missing-spaces (string)
+  (prykra-c/form-string (prykra-c/add-missing-token-spaces (prykra-c/tokenize-string string))))
+
+(defun prykra-c/replace-current-line (new-line)
+  "Replace the current line with NEW-LINE."
+  (let ((start (line-beginning-position))
+        (end (line-end-position)))
+    (delete-region start end)
+    (goto-char start)
+    (insert new-line)))
+
+
+(defun prykra-c()
+  (interactive)
+  (let* ((raw-line (thing-at-point 'line t))
+         (clean-line (string-trim-right raw-line "[\r\n]+")))
+    (prykra-c/replace-current-line (add-missing-spaces clean-line))))
+
+(defun prykra-c/ret-wrapper ()
+  (interactive)
+  (prykra-c)
+  (newline-and-indent))
+
+;; (add-hook 'emacs-lisp-mode-hook
+;;           (lambda ()
+;;             (local-set-key (kbd "RET") #'my/ret-wrapper)))
+
+;; (message "%s" (thing-at-point 'line t))
+;;;;;;;;;;;;;;;;;TESTS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(setq prykra-c/test-cases
+      '(("const char* test = +1+2+3*10/20 +5;" . "const char* test = +1 + 2 + 3 * 10 / 20 + 5;")
+        ("a=1+2*3;" . "a = 1 + 2 * 3;")
+        ("x=10/2-5;" . "x = 10 / 2 - 5;")
+        ("foo=bar+baz;" . "foo = bar + baz;")
+        ("result=a*b+c/d-e;" . "result = a * b + c / d - e;")
+        ("    f o o   " . "    f o o   ")
+        ("(a==10)?putchar(char): putchar(char2);" . "(a == 10) ? putchar(char) : putchar(char2);")
+
+        ;; New cases
+        ("ptr=arr+index*4;" . "ptr = arr + index * 4;")
+        ("value=*(ptr+1);" . "value = *(ptr + 1);")
+        ("flag=a&&b||c;" . "flag = a && b || c;")
+        ("mask=val&0xFF;" . "mask = val & 0xFF;")
+        ("shifted=x<<2>>1;" . "shifted = x << 2 >> 1;")
+        ("count=i++ + --j;" . "count = i++ + --j;")
+        ("call(foo+bar);" . "call(foo + bar);")
+        ("array[i+1]=x;" . "array[i + 1] = x;")
+        ("x=(y*z)+(a/b);" . "x = (y * z) + (a / b);")
+        ("if(a==b&&c!=d)e=1;" . "if (a == b && c != d) e = 1;")
+        ("while(x-- > 0)sum+=x;" . "while (x-- > 0) sum += x;")
+        ("return a+b*c-d/e;" . "return a + b * c - d / e;")
+        ("char* msg=\"a+b=c\";" . "char* msg = \"a+b=c\";")  ;; string literals should remain untouched
+
+        ;; More test cases
+        ("x=-a*-b;" . "x = -a * -b;")
+        ("y=~a^ b|b;" . "y = ~a ^ b | b;")
+        ("z=a>=b<=c;" . "z = a >= b <= c;")
+        ("cond=a?b+c:d*e;" . "cond = a ? b + c : d * e;")
+        ("cast=(int)x+y;" . "cast = (int) x + y;")
+        ("for(i=0;i<10;i++)sum+=i;" . "for (i = 0; i < 10; i++) sum += i;")
+        ("do{sum+=i;i--;}while(i>0);" . "do { sum += i; i--; } while (i > 0);")
+        ("switch(val){case 1:x=2;break;default:x=0;}" . "switch (val) { case 1 : x = 2; break; default : x = 0; }")
+        ("int add(int a,int b){return a+b;}" . "int add(int a, int b) { return a + b; }")
+        ("array={1,2,3+4};" . "array = { 1, 2, 3 + 4 };")
+        ("x=1;//comment+a+b" . "x = 1; //comment+a+b")
+        ("y=2;/*multi+line*comment*/" . "y = 2; /*multi+line*comment*/")
+        ("#define MAX a>b?a:b" . "#define MAX a > b ? a : b")
+        ("struct Point{int x,y;};" . "struct Point { int x, y; };")
+        ("enum Color{RED=1,GREEN=2+3,BLUE};" . "enum Color { RED = 1, GREEN = 2 + 3, BLUE };")
+        ("void func(){if(a)b=1;else b=2;}" . "void func() { if (a) b = 1; else b = 2; }")
+        ("x=a,b=2,c=3;" . "x = a, b = 2, c = 3;")
+        ("ptr=&var;" . "ptr = &var;")
+        ("deref=*ptr;" . "deref = *ptr;")
+        ("sizeof(int)*count;" . "sizeof(int) * count;")
+        ("x=!a&&b;" . "x = !a && b;")
+        ("for(size_t i = 0; i < 4; i++)" . "for (size_t i = 0; i < 4; i++)")
+        ("memset(display.screenBuffer, 0x00, sizeof(display.screenBuffer));" . "memset(display.screenBuffer, 0x00, sizeof(display.screenBuffer));")
+        ("obj->field=a+b*c;" . "obj->field = a + b * c;")
+        ("val=a%b+c%d;" . "val = a % b + c % d;")
+        ("cond=(a>b)&&(c<d);" . "cond = (a > b) && (c < d);")
+        ("nested=a?b?c:d:e;" . "nested = a ? b ? c : d : e;")
+        ("typedef int* ptr_t;" . "typedef int* ptr_t;")
+        ("const int max=10*2+5;" . "const int max = 10 * 2 + 5;")
+        ("volatile int var=x+y;" . "volatile int var = x + y;")
+        ("goto label;x=1;label:y=2;" . "goto label; x = 1; label : y = 2;")
+        ("union Data{int i;float f;};" . "union Data { int i; float f; };")
+        ("struct Init s={.x=1+2,.y=3*4};" . "struct Init s = { .x = 1 + 2, .y = 3 * 4 };")
+        ("int arr[]={0,1+1,2*3,4/2};" . "int arr[] = { 0, 1 + 1, 2 * 3, 4 / 2 };")
+        ("if(a){b=1+c;}else{d=2*e;}" . "if (a) { b = 1 + c; } else { d = 2 * e; }")
+        ("while(a<10)a+=2;" . "while (a < 10) a += 2;")
+        ("for(;;)x--;" . "for (;;) x--;")
+        ("switch(x){case 1+1:y=2;break;case 3:z=4;break;}" . "switch (x) { case 1 + 1 : y = 2; break; case 3 : z = 4; break; }")
+        ("#include <stdio.h>" . "#include <stdio.h>")
+        ("printf(\"%d + %d = %d\n\",a,b,a+b);" . "printf(\"%d + %d = %d\n\", a, b, a + b);")
+        ("x=(a==b)?c:d;" . "x = (a == b) ? c : d;")
+        ("ptr=(void*)addr+offset;" . "ptr = (void*) addr + offset;")
+        ("bit=val&mask>>shift;" . "bit = val & mask >> shift;")
+        ("logic=a||b&&c||!d;" . "logic = a || b && c || !d;")
+        ("compound+=a-=b*=c/=(d%e);" . "compound += a -= b *= c /= (d % e);")
+        ("macro(a,b) a+b" . "macro(a, b) a + b")
+        ("inline int square(int x){return x*x;}" . "inline int square(int x) { return x * x; }")
+        ("asm(\"mov %0, %1\" : \"=r\"(out) : \"r\"(in));" . "asm(\"mov %0, %1\" : \"=r\"(out) : \"r\"(in));")
+        ("x= a ? b : c ? d : e;" . "x = a ? b : c ? d : e;")
+        ("y=sizeof(struct{int a,b;});" . "y = sizeof(struct { int a, b; } );")
+        ("z=(int)(3.14*2)+1;" . "z = (int)(3.14 * 2) + 1;")
+        ("strcpy(dest,src);" . "strcpy(dest, src);")
+        ))
+
+(defun prykra-c/run-test (func input expected-result)
+  (let* ((result (funcall func input))
+         (status (string= result expected-result)))
+    (cons status (format "%s: expected %s got %s" (if status "PASSED" "FAILED") expected-result result))))
+
+(defun prykra-c/run-all-tests ()
+  (let* ((test-results (mapcar (lambda (x) (prykra-c/run-test #'add-missing-spaces (car x) (cdr x))) prykra-c/test-cases))
+         (passed-count (cl-reduce (lambda (acc value) (+ acc (if (car value) 1 0))) test-results :initial-value 0)))
+    (dolist (result test-results)
+      (print (cdr result)))
+    (print (format "PASSED: %d/%d" passed-count (length  test-results)))
+    nil))
+
+
+(provide 'prykra-c)
+;;; prykra-c.el ends here

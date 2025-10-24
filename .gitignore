@@ -1,0 +1,11 @@
+# Ignore everything
+*
+
+# But not these files...
+!init.el
+!custom-vars.el
+!prykra-c/*
+!.gitignore
+
+# ...even if they are in subdirectories
+!*/

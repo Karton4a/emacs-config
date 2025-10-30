@@ -22,7 +22,10 @@
 (require 'use-package)
 (setq use-package-always-ensure t)
 
-(load "~/.emacs.d/config-settings")
+(condition-case err
+    (load "~/.emacs.d/config-settings")
+  (error
+   (setq init-config 'HOME)))
 
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
 (when (eq init-config 'WORK)

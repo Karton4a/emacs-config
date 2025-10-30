@@ -351,7 +351,7 @@
 
   (use-package c-ts-mode
 	:ensure nil ;; Built-in to Emacs 29+
-	:hook (c-ts-mode . lsp)
+	:hook ((c++-ts-mode . lsp))
 	:custom
 	(c-ts-mode-indent-offset 4) ;; 4 spaces for indentation
 	(indent-tabs-mode t) ;; Use tabs

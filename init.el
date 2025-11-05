@@ -292,7 +292,6 @@
   :ensure t
   :hook (gptel-mode . visual-line-mode)
   :config
-  (setq gptel-api-key "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")
   (setq gptel-default-mode 'org-mode)
   (add-hook 'gptel-post-response-functions 'gptel-end-of-response))
 

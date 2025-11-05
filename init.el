@@ -220,17 +220,17 @@
                                      (c++-mode . "stroustrup"))))
 
 
-(use-package counsel-projectile
-  :ensure t)
+(use-package-work counsel-projectile
+                  :ensure t)
 
-(use-package projectile
-  :ensure t
-  :hook ((counsel-projectile-mode))
-  :config
-  (projectile-mode +1)
-  ;; Recommended keymap prefix on Windows/Linux
-  (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
-  (setq projectile-indexing-method 'alien))
+(use-package-work projectile
+                  :ensure t
+                  :hook ((counsel-projectile-mode))
+                  :config
+                  (projectile-mode +1)
+                  ;; Recommended keymap prefix on Windows/Linux
+                  (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
+                  (setq projectile-indexing-method 'alien))
 
 
 (use-package-home python
@@ -322,6 +322,11 @@
 (use-package-work p4
                   :ensure t)
 
+(use-package-home sly
+                  :ensure t
+                  :config
+                  (setq inferior-lisp-program "sbcl.exe"))
+
 (when (eq init-config 'WORK)
   (add-to-list 'auto-mode-alist '("\\.nxshader\\'" . c-mode))
   (add-to-list 'auto-mode-alist '("\\.inc\\'" . c-mode))
@@ -411,10 +416,12 @@
 (global-set-key (kbd "C-c p") 'windmove-up)
 (global-set-key (kbd "C-c n") 'windmove-down)
 
-;; windows key
-(setq w32-pass-lwindow-to-system nil
-      w32-lwindow-modifier 'super) ;; Menu key
-(w32-register-hot-key [s-])
+
+(when (eq system-type 'windows-nt)
+  ;; Windows-specific config here
+  (setq w32-pass-lwindow-to-system nil
+        w32-lwindow-modifier 'super) ;; Menu key
+  (w32-register-hot-key [s-]))
 
 (setq lsp-keymap-prefix "C-c")
 
@@ -477,6 +484,14 @@
 (global-set-key (kbd "M-s M-s") 'isearch-forward)
 ;; (global-set-key (kbd "C-c u") 'uncomment-region
 (global-unset-key (kbd "C-x C-c"))
+
+(global-set-key (kbd "C-)") 'sp-forward-slurp-sexp)
+(global-set-key (kbd "C-(") 'sp-backward-slurp-sexp)
+(global-set-key (kbd "C-}") 'sp-forward-barf-sexp)
+(global-set-key (kbd "C-{") 'sp-backward-barf-sexp)
+
+(global-set-key (kbd "M-f") 'sp-forward-sexp)
+(global-set-key (kbd "M-b") 'sp-backward-sexp)
 
 (defun select-word-under-cursor ()
   "Select the word under the cursor."

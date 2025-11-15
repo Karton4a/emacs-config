@@ -61,6 +61,8 @@
 (setq custom-file (locate-user-emacs-file "custom-vars.el"))
 (load custom-file 'noerror 'nomessage)
 
+(setq use-short-answers t)
+
 (setq use-dialog-box nil)
 (global-auto-revert-mode 1)
 (delete-selection-mode 1)

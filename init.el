@@ -106,6 +106,18 @@
 ;;   (set-face-attribute 'font-lock-variable-name-face nil
 ;;                       :foreground "#ffffff"))
 
+
+(setq nov-unzip-program (executable-find "tar")
+      nov-unzip-args '("-xC" directory "-xf" filename))
+(add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
+
+(use-package pdf-tools
+  :ensure t
+  :config
+  (pdf-tools-install)
+  ;; (setq-default pdf-view-display-size 'fit-page)
+  (add-hook 'pdf-view-mode-hook (lambda () (display-line-numbers-mode -1))))
+
 (use-package dired
   :ensure nil
   :custom ((dired-listing-switches "-agho --group-directories-first")))
@@ -326,7 +338,7 @@
 (use-package-home sly
                   :ensure t
                   :config
-                  (setq inferior-lisp-program "sbcl.exe"))
+                  (setq inferior-lisp-program "sbcl.exe --dynamic-space-size 4096"))
 
 (when (eq init-config 'WORK)
   (add-to-list 'auto-mode-alist '("\\.nxshader\\'" . c-mode))
@@ -486,13 +498,16 @@
 ;; (global-set-key (kbd "C-c u") 'uncomment-region
 (global-unset-key (kbd "C-x C-c"))
 
-(global-set-key (kbd "C-)") 'sp-forward-slurp-sexp)
-(global-set-key (kbd "C-(") 'sp-backward-slurp-sexp)
+(global-set-key (kbd "C-M-0") 'sp-forward-slurp-sexp)
+(global-set-key (kbd "C-M-9") 'sp-backward-slurp-sexp)
 (global-set-key (kbd "C-}") 'sp-forward-barf-sexp)
 (global-set-key (kbd "C-{") 'sp-backward-barf-sexp)
 
 (global-set-key (kbd "M-f") 'sp-forward-sexp)
 (global-set-key (kbd "M-b") 'sp-backward-sexp)
+
+(when (eq init-config 'HOME)
+  (global-set-key (kbd "C-x p a") 'ff-find-other-file))
 
 (defun select-word-under-cursor ()
   "Select the word under the cursor."

@@ -111,13 +111,6 @@
       nov-unzip-args '("-xC" directory "-xf" filename))
 (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
 
-(use-package pdf-tools
-  :ensure t
-  :config
-  (pdf-tools-install)
-  ;; (setq-default pdf-view-display-size 'fit-page)
-  (add-hook 'pdf-view-mode-hook (lambda () (display-line-numbers-mode -1))))
-
 (use-package dired
   :ensure nil
   :custom ((dired-listing-switches "-agho --group-directories-first")))

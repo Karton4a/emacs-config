@@ -7,3 +7,22 @@
       (insert (format "#ifndef %s\n#define %s\n" define-name define-name))
       (goto-char (point-max))
       (insert (format "#endif //%s" define-name)))))
+
+(defun copy-buffer-name-to-clipboard ()
+  "Copy the current buffer name to the clipboard."
+  (interactive)
+  (kill-new (buffer-name))
+  (message "Buffer name '%s' copied to clipboard" (buffer-name)))
+
+(defun copy-file-path-to-clipboard ()
+  "Copy the full path of the current file to the clipboard."
+  (interactive)
+  (if buffer-file-name
+      (progn
+        (kill-new buffer-file-name)
+        (message "Copied file path: %s" buffer-file-name))
+    (message "This buffer is not visiting a file.")))
+
+
+
+

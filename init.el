@@ -196,6 +196,8 @@
 (use-package flycheck
   :ensure t)
 
+(load "~/.emacs.d/my-plugins/plugins.el")
+
 (add-to-list 'load-path "~/.emacs.d/prykra-c/")
 
 (use-package-home prykra-c

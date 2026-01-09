@@ -5,6 +5,7 @@
 !init.el
 !custom-vars.el
 !prykra-c/*
+!my-plugins/*
 !.gitignore
 
 # ...even if they are in subdirectories

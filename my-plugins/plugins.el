@@ -1,4 +1,4 @@
-(defun define-guard()
+(defun insert-define-guard()
   (interactive)
   (let ((define-name (upcase (replace-regexp-in-string "\\." "_" (buffer-name)))))
     (message "Define name %s" define-name)

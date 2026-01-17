@@ -1,5 +1,24 @@
 ;; -*- lexical-binding: t -*-
 
+
+(defvar-local my-cmake-lighter " Debug"
+  "Buffer-local lighter for `my-mode'.")
+
+(defvar-local my-cmake-config-var "Debug"
+  "Buffer-local lighter for `my-mode'.")
+
+(defun my-cmake-switch-config (config)
+  "Toggle the mode line lighter in the current buffer."
+  (interactive
+   (list (completing-read "Choose config: " '("Debug" "Release"))))
+  (setq my-cmake-lighter (format " %s" config))
+  (setq my-cmake-config-var config)
+  (force-mode-line-update))
+
+(define-minor-mode my-cmake
+  "A custom minor mode with buffer-local lighter."
+  :lighter my-cmake-lighter)
+
 (defun insert-define-guard()
   "Insert a C-style header guard at the beginning and end of the buffer."
   (interactive)
@@ -47,7 +66,7 @@
     (global-set-key (kbd "<f5>") 'my-cmake-build)
     ;; Run the build using Emacs' compile command
     (let ((default-directory my-project-root))
-      (compile "cmake -S . -B build/Release -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && cmake -S . -B build/Debug -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
+      (compile "cmake -S . -B build/Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
       (add-hook 'compilation-finish-functions
                 (lambda (_buf _msg)
                   (let ((src (expand-file-name "build/Debug/compile_commands.json" my-project-root))
@@ -67,7 +86,7 @@
     
     ;; Run the build using Emacs' compile command
     (let ((default-directory project-root))
-      (compile "cmake --build build/Debug"))))
+      (compile (format "cmake --build build/%s --config %s" my-cmake-config-var my-cmake-config-var)))))
 
 (defun my-cmake-debug()
   "Run cmake in the project's build directory."

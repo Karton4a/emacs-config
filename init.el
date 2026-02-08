@@ -199,9 +199,17 @@
 (load "~/.emacs.d/my-plugins/plugins.el")
 
 (add-to-list 'load-path "~/.emacs.d/prykra-c/")
+(add-to-list 'load-path "~/.emacs.d/bigun/")
 
 (use-package-home prykra-c
                   :ensure nil)
+
+(use-package-home bigun-mode
+                  :ensure nil
+                  :bind (("<f5>" . bigun-build-and-run)
+                         ("<f6>" . bigun-build))
+                  :config
+                  (bigun-global-mode 1))
 
 (use-package-home cc-mode
                   :mode ("\\.c\\'" . c-mode)

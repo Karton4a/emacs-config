@@ -5,6 +5,7 @@
 !init.el
 !custom-vars.el
 !prykra-c/*
+!bigun/*
 !my-plugins/*
 !.gitignore
 

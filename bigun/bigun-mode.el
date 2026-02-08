@@ -1,4 +1,4 @@
-
+;; -*- lexical-binding: t -*-
 (require 'cl-lib)
 
 (cl-defstruct project-state
@@ -190,6 +190,7 @@
 
 (defun bigun-run-gdb()
   (interactive)
+  ;; TODO test this check on buffer without cmake
   (unless (bigun-is-cmake-project)
     (error "No cmake or project is configured"))
   (let ((default-directory (bigun-get-project-root))

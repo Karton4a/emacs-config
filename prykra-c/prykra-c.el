@@ -38,7 +38,7 @@
 
 (setq prykra-c/operators-symbols (list ?+ ?- ?* ?/ ?= ?: ?? ?~ ?! ?> ?< ?| ?& ?^ ?%))
 
-(setq prykra-c/two-chars-operators (list "++" "--" "*=" "+=" "/=" "-=" "&=" "|=" "^=" "<=" ">=" "!=" "~=" "==" ">>" "<<" "&&" "||" "->"))
+(setq prykra-c/two-chars-operators (list "++" "--" "*=" "+=" "/=" "-=" "&=" "|=" "^=" "<=" ">=" "!=" "~=" "==" ">>" "<<" "&&" "||" "->" "::"))
 (setq prykra-c/three-chars-operators (list ">>=" "<<="))
 
 (setq prykra-c/one-line-comment "//")
@@ -143,7 +143,7 @@
 
 
 ;; (setq operators-list-old '("+" "-" "*" "/" "?" ":" "<<" ">>" "|" "||" "&&" "&" "+=" "-=" "*=" "/=" "<<=" ">>=" "|=" "&=" "~=" "<" ">" ">=" "<=" "!=" "==" "=" "^"))
-(setq prykra-c/exclude-spacing '("++" "--" "->"))
+(setq prykra-c/exclude-spacing '("++" "--" "->" "::"))
 (setq prykra-c/operators-list (cl-set-difference (append (mapcar #'char-to-string prykra-c/operators-symbols) prykra-c/two-chars-operators prykra-c/three-chars-operators) prykra-c/exclude-spacing :test #'string=))
 (setq prykra-c/unary-operators-list '("+" "-" "*" "&" "~" "!"))
 (setq prykra-c/control-keywords-list '("if" "while" "for" "switch"))
@@ -335,6 +335,7 @@
         ("y=sizeof(struct{int a,b;});" . "y = sizeof(struct { int a, b; } );")
         ("z=(int)(3.14*2)+1;" . "z = (int)(3.14 * 2) + 1;")
         ("strcpy(dest,src);" . "strcpy(dest, src);")
+        ("Hello::World" . "Hello::World")
         ))
 
 (defun prykra-c/run-test (func input expected-result)

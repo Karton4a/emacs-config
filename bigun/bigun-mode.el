@@ -195,7 +195,8 @@
     (error "No cmake or project is configured"))
   (let ((default-directory (bigun-get-project-root))
         (project-state (bigun-get-project-state (bigun-get-project-root))))
-    (gdb (format "gdb -i=mi %s"(project-state-exe-name-get-full-path project-state)))))
+    (bigun-build-with-callback (lambda ()
+                                 (gdb (format "gdb -i=mi %s"(project-state-exe-name-get-full-path project-state)))))))
 
 (provide 'bigun-mode)
 

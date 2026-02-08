@@ -33,8 +33,14 @@
 
 (cl-defstruct project-state
   config
+  source-dir
   exe-name)
 
+(defun project-state-exe-name-get-full-path(project-state)
+  (expand-file-name
+   (project-state-exe-name project-state)
+   (expand-file-name (project-state-config project-state)
+                     (expand-file-name "build" (project-state-source-dir project-state)))))
 
 (defvar my-cmake-generators '("Ninja Multi-Config" "Unix Makefiles"))
 
@@ -90,7 +96,7 @@
          (cmake-dir   (locate-dominating-file project-root "CMakeLists.txt"))
          (cmake-file  (expand-file-name "CMakeLists.txt" cmake-dir))
          (exe-name    (my-cmake-get-exe-from-file cmake-file)))
-    (make-project-state :config "Debug" :exe-name (if exe-name exe-name ""))))
+    (make-project-state :config "Debug" :source-dir cmake-dir :exe-name (if exe-name exe-name ""))))
 
 (defun my-cmake-get-project-state (project-name)
   (let ((entry (assoc project-name my-cmake-session-configs)))
@@ -100,11 +106,12 @@
     (cdr entry)))
 
 (defun my-cmake-get-project-root()
-  (project-root (project-current)))
+  (when (project-current)
+    (project-root (project-current))))
 
 (defun my-cmake-is-cmake-project ()
   (let* ((my-project-root (my-cmake-get-project-root))
-         (cmake-lists (locate-dominating-file my-project-root "CMakeLists.txt")))
+         (cmake-lists (when my-project-root (locate-dominating-file my-project-root "CMakeLists.txt"))))
     (and my-project-root cmake-lists)))
 
 (defun my-cmake-mode-line ()
@@ -151,11 +158,23 @@
   (with-temp-file "~/.emacs.d/cmake-project-states.el"
     (prin1 my-cmake-session-configs (current-buffer))))
 
+(defun my-run-compile-with-callback (command callback)
+  "Run compile with COMMAND, then CALLBACK once when finished."
+  (let (fn)
+    (setq fn
+          (lambda (buf msg)
+            (when (and callback (string-match "finished" msg))
+              (funcall callback))
+            (remove-hook 'compilation-finish-functions fn)))
+    (add-hook 'compilation-finish-functions fn)
+    (compile command)))
+
+
 ;; TODO try to fix these wierd errors
 ;; error in process sentinel: let: Symbol’s value as variable is void: project-root
 ;; error in process sentinel: Symbol’s value as variable is void: project-root
 
-(defun my-cmake-config (generator)
+(defun my-cmake-init (generator)
   "Run cmake in the project's build directory."
   (interactive
    (list (completing-read "Generator: " my-cmake-generators)))
@@ -170,43 +189,47 @@
 
     ;; (global-set-key (kbd "<f5>") 'my-cmake-build)
     ;; Run the build using Emacs' compile command
-    (let ((default-directory my-project-root))
-      (delete-directory "build" t)
-      (compile (format "cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -G \"%s\"" generator))
-      (add-hook 'compilation-finish-functions
-                (lambda (_buf _msg)
-                  (let ((src (expand-file-name "build/compile_commands.json" my-project-root))
-                        (dst (expand-file-name "compile_commands.json" my-project-root)))
-                    (when (file-exists-p src)
-                      (copy-file src dst t)
-                      (message "Copied %s -> %s" src dst))))))))
+    (let ((default-directory my-project-root)
+          (project-source-dir (project-state-source-dir (my-cmake-get-project-state (my-cmake-get-project-root)))))
+      (delete-directory (expand-file-name "build" project-source-dir) t)
+      (my-run-compile-with-callback (format "cmake -S %s -B %s -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -G \"%s\""
+                                            project-source-dir
+                                            (expand-file-name "build" project-source-dir)
+                                            generator)
+                                    (lambda ()
+                                      (let ((src (expand-file-name "build/compile_commands.json" project-source-dir))
+                                            (dst (expand-file-name "compile_commands.json" my-project-root)))
+                                        (when (file-exists-p src)
+                                          (copy-file src dst t)
+                                          (message "Copied %s -> %s" src dst))))))))
+
+
+
 
 (defun my-cmake-build-with-callback (post-build-callback)
   (unless (my-cmake-is-cmake-project)
     (error "No cmake or project is configured"))
   
-  (let ((default-directory project-root))
+  (let ((default-directory (my-cmake-get-project-root))
+        (project-state (my-cmake-get-project-state (my-cmake-get-project-root))))
     ;; (compile (format "cmake --build build --config %s" (my-cmake-get-project-config (project-root (project-current))))))))
-    (compile (format "cmake --build build --config %s" (project-state-config (my-cmake-get-project-state (my-cmake-get-project-root)))))
-    (add-hook 'compilation-finish-functions
-              (lambda (_buff _msg)
-                (funcall post-build-callback)))))
+    (my-run-compile-with-callback (format "cmake --build %s --config %s"
+                                          (expand-file-name "build" (project-state-source-dir project-state))
+                                          (project-state-config project-state))
+                                  post-build-callback)))
 
 (defun my-cmake-build ()
   "Run cmake in the project's build directory."
   (interactive)
-  ;; Find the project root by locating CMakeLists.txt
-  (let* ((project-root (project-root (project-current)))
-         (build-dir (locate-dominating-file project-root "CMakeLists.txt")))
-    (unless project-root
-      (error "Setup project first"))
-    
-    ;; Run the build using Emacs' compile command
-    (let ((default-directory project-root))
-      ;; (compile (format "cmake --build build --config %s" (my-cmake-get-project-config (project-root (project-current))))))))
-      (compile (format "cmake --build build --config %s" (project-state-config (my-cmake-get-project-state (project-root (project-current)))))))))
+  (my-cmake-build-with-callback nil))
 
-;; (defun my-cmake-debug()
+(defun my-cmake-build-and-run ()
+  (interactive)
+  (my-cmake-build-with-callback (lambda ()
+                                  (let ((project-state (my-cmake-get-project-state (my-cmake-get-project-root))))
+                                    (compile (project-state-exe-name-get-full-path project-state))))))
+
+;; (defun my-cmake-debug-gdb()
 ;;   "Run cmake in the project's build directory."
 ;;   (interactive)
 ;;   ;; Find the project root by locating CMakeLists.txt

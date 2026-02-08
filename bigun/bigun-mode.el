@@ -149,7 +149,7 @@
   (unless (bigun-is-cmake-project)
     (error "No cmake or project is configured"))
   
-  (let ((default-directory my-project-root)
+  (let ((default-directory (bigun-get-project-root))
         (project-source-dir (project-state-source-dir (bigun-get-project-state (bigun-get-project-root)))))
     (delete-directory (expand-file-name "build" project-source-dir) t)
     (my-run-compile-with-callback (format "cmake -S %s -B %s -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -G \"%s\""
@@ -158,7 +158,7 @@
                                           generator)
                                   (lambda ()
                                     (let ((src (expand-file-name "build/compile_commands.json" project-source-dir))
-                                          (dst (expand-file-name "compile_commands.json" my-project-root)))
+                                          (dst (expand-file-name "compile_commands.json" (bigun-get-project-root))))
                                       (when (file-exists-p src)
                                         (copy-file src dst t)
                                         (message "Copied %s -> %s" src dst)))))))

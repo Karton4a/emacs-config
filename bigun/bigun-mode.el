@@ -188,17 +188,13 @@
                                   (let ((project-state (bigun-get-project-state (bigun-get-project-root))))
                                     (compile (project-state-exe-name-get-full-path project-state))))))
 
-;; (defun bigun-debug-gdb()
-;;   "Run cmake in the project's build directory."
-;;   (interactive)
-;;   ;; Find the project root by locating CMakeLists.txt
-;;   (let* ((project-root (project-root (project-current)))
-;;          (build-dir (expand-file-name "build" project-root)))
-;;     (unless project-root
-;;       (error "Setup project first"))
-;;     ;; Run the build using Emacs' compile command
-;;     (let ((default-directory project-root))
-;;       (gdb "build/Debug/src/HelloFriend"))))
+(defun bigun-run-gdb()
+  (interactive)
+  (unless (bigun-is-cmake-project)
+    (error "No cmake or project is configured"))
+  (let ((default-directory (bigun-get-project-root))
+        (project-state (bigun-get-project-state (bigun-get-project-root))))
+    (gdb (format "gdb -i=mi %s"(project-state-exe-name-get-full-path project-state)))))
 
 (provide 'bigun-mode)
-(provide 'bigun-global-mode)
+

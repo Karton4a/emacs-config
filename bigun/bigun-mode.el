@@ -64,12 +64,21 @@
     exe-name))
 
 (defun bigun-get-exe-from-file (cmake-lists-path)
-  "Extract the target name from an add_executable line in CMakeLists.txt."
+  "Extract the first target name from add_executable-like lines in CMakeLists.txt.
+Supports both add_executable and qt_add_executable."
   (let* ((tokens (bigun-tokenize-string
                   (bigun-file-to-string cmake-lists-path)))
-         (pos (cl-position "add_executable" tokens :test #'string=)))
-    (when (and pos (>= (length tokens) (+ pos 2)))
-      (bigun-process-exe-name (nth (+ pos 2) tokens)))))
+         (keywords '("add_executable" "qt_add_executable"))
+         (pos 0)
+         result)
+    (while (and (not result) (< pos (length tokens)))
+      (when (member (nth pos tokens) keywords)
+        ;; ensure there is a target name after keyword
+        (when (>= (length tokens) (+ pos 2))
+          (setq result (bigun-process-exe-name (nth (+ pos 2) tokens)))))
+      (setq pos (1+ pos)))
+    result))
+
 
 (defun find-cmakelists-down (dir)
   "Search downward from DIR for the nearest CMakeLists.txt.
@@ -242,8 +251,7 @@ The result is stored in `bigun-command-line-args`."
   (when (bigun-is-cmake-project)
     (let ((state (bigun-get-project-state (bigun-get-project-root))))
       (setf (project-state-cmd-args state) cmd-args)
-      (bigun-save-project-state)
-      (message "Command line args set to: %s" cmd-args))))
+      (bigun-save-project-state))))
 
 
 (defun bigun-set-cmake-args (cmake-args)

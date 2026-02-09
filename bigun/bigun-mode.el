@@ -213,7 +213,8 @@ Return the full path if found, or nil if not."
   (let ((default-directory (bigun-get-project-root))
         (project-state (bigun-get-project-state (bigun-get-project-root))))
     (bigun-build-with-callback (lambda ()
-                                 (gdb (format "gdb -i=mi %s"(project-state-exe-name-get-full-path project-state)))))))
+                                 (let ((default-directory (bigun-get-project-root)))
+                                   (gdb (format "gdb -i=mi %s"(project-state-exe-name-get-full-path project-state))))))))
 
 (defvar bigun-command-line-args ""
   "Stores the last command line arguments entered by `bigun-set-command-line-args`.")

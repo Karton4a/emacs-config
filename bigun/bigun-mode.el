@@ -70,10 +70,20 @@
     (when (and pos (>= (length tokens) (+ pos 2)))
       (bigun-process-exe-name (nth (+ pos 2) tokens)))))
 
+(defun find-cmakelists-down (dir)
+  "Search downward from DIR for the nearest CMakeLists.txt.
+Return the full path if found, or nil if not."
+  (when dir
+    (let ((result nil))
+      (dolist (file (directory-files-recursively dir "^CMakeLists\\.txt$" t))
+        (unless result
+          (setq result file)))
+      result)))
+
 (defun make-project-default-state()
   (let* ((project-root (bigun-get-project-root))
-         (cmake-dir   (locate-dominating-file project-root "CMakeLists.txt"))
-         (cmake-file  (expand-file-name "CMakeLists.txt" cmake-dir))
+         (cmake-file  (find-cmakelists-down project-root))
+         (cmake-dir   (file-name-directory cmake-file))
          (exe-name    (bigun-get-exe-from-file cmake-file)))
     (make-project-state
      :config "Debug"
@@ -94,7 +104,7 @@
 
 (defun bigun-is-cmake-project ()
   (let* ((my-project-root (bigun-get-project-root))
-         (cmake-lists (when my-project-root (locate-dominating-file my-project-root "CMakeLists.txt"))))
+         (cmake-lists (when my-project-root (find-cmakelists-down my-project-root))))
     (and my-project-root cmake-lists)))
 
 (defun bigun-mode-line ()

@@ -209,6 +209,7 @@
                   :bind (("<f5>" . bigun-build-and-run)
                          ("<f6>" . bigun-build))
                   :config
+                  (bigun-restore-project-state)
                   (bigun-global-mode 1))
 
 (use-package-home cc-mode

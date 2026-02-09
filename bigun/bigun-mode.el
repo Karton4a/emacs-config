@@ -5,6 +5,7 @@
   config
   source-dir
   cmd-args
+  cmake-args
   exe-name)
 
 (defun project-state-exe-name-get-full-path(project-state)
@@ -89,7 +90,8 @@ Return the full path if found, or nil if not."
      :config "Debug"
      :source-dir cmake-dir
      :exe-name (if exe-name exe-name "")
-     :cmd-args "")))
+     :cmd-args ""
+     :cmake-args "")))
 
 (defun bigun-get-project-state (project-name)
   (let ((entry (assoc project-name bigun-session-configs)))
@@ -141,8 +143,17 @@ Return the full path if found, or nil if not."
 
 (defun bigun-save-project-state()
   (interactive)
-  (with-temp-file "~/.emacs.d/cmake-project-states.el"
+  (with-temp-file "~/.emacs.d/bigun-project-states.el"
     (prin1 bigun-session-configs (current-buffer))))
+
+(defun bigun-restore-project-state ()
+  "Restore `bigun-session-configs` from ~/.emacs.d/bigun-project-states.el."
+  (interactive)
+  (let ((file "~/.emacs.d/bigun-project-states.el"))
+    (when (file-exists-p file)
+        (with-temp-buffer
+          (insert-file-contents file)
+          (setq bigun-session-configs (read (current-buffer)))))))
 
 (defun my-run-compile-with-callback (command callback)
   "Run compile with COMMAND, then CALLBACK once when finished."
@@ -167,9 +178,10 @@ Return the full path if found, or nil if not."
   (let ((default-directory (bigun-get-project-root))
         (project-source-dir (project-state-source-dir (bigun-get-project-state (bigun-get-project-root)))))
     (delete-directory (expand-file-name "build" project-source-dir) t)
-    (my-run-compile-with-callback (format "cmake -S %s -B %s -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -G \"%s\""
+    (my-run-compile-with-callback (format "cmake -S %s -B %s -DCMAKE_EXPORT_COMPILE_COMMANDS=ON %s -G \"%s\""
                                           project-source-dir
                                           (expand-file-name "build" project-source-dir)
+                                          (project-state-cmake-args (bigun-get-project-state (bigun-get-project-root)))
                                           generator)
                                   (lambda ()
                                     (let ((src (expand-file-name "build/compile_commands.json" project-source-dir))
@@ -230,7 +242,20 @@ The result is stored in `bigun-command-line-args`."
   (when (bigun-is-cmake-project)
     (let ((state (bigun-get-project-state (bigun-get-project-root))))
       (setf (project-state-cmd-args state) cmd-args)
+      (bigun-save-project-state)
       (message "Command line args set to: %s" cmd-args))))
+
+
+(defun bigun-set-cmake-args (cmake-args)
+  (interactive
+   (list (read-string
+          "Enter cmake args: "
+          (when (bigun-is-cmake-project)
+            (project-state-cmake-args (bigun-get-project-state (bigun-get-project-root)))))))
+  (when (bigun-is-cmake-project)
+    (let ((state (bigun-get-project-state (bigun-get-project-root))))
+      (setf (project-state-cmake-args state) cmake-args)
+      (bigun-save-project-state))))
 
 (provide 'bigun-mode)
 

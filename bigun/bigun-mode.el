@@ -4,6 +4,7 @@
 (cl-defstruct project-state
   config
   source-dir
+  cmd-args
   exe-name)
 
 (defun project-state-exe-name-get-full-path(project-state)
@@ -74,7 +75,11 @@
          (cmake-dir   (locate-dominating-file project-root "CMakeLists.txt"))
          (cmake-file  (expand-file-name "CMakeLists.txt" cmake-dir))
          (exe-name    (bigun-get-exe-from-file cmake-file)))
-    (make-project-state :config "Debug" :source-dir cmake-dir :exe-name (if exe-name exe-name ""))))
+    (make-project-state
+     :config "Debug"
+     :source-dir cmake-dir
+     :exe-name (if exe-name exe-name "")
+     :cmd-args "")))
 
 (defun bigun-get-project-state (project-name)
   (let ((entry (assoc project-name bigun-session-configs)))
@@ -186,7 +191,9 @@
   (interactive)
   (bigun-build-with-callback (lambda ()
                                   (let ((project-state (bigun-get-project-state (bigun-get-project-root))))
-                                    (compile (project-state-exe-name-get-full-path project-state))))))
+                                    (compile (format "%s %s"
+                                                     (project-state-exe-name-get-full-path project-state)
+                                                     (project-state-cmd-args project-state)))))))
 
 (defun bigun-run-gdb()
   (interactive)
@@ -197,6 +204,22 @@
         (project-state (bigun-get-project-state (bigun-get-project-root))))
     (bigun-build-with-callback (lambda ()
                                  (gdb (format "gdb -i=mi %s"(project-state-exe-name-get-full-path project-state)))))))
+
+(defvar bigun-command-line-args ""
+  "Stores the last command line arguments entered by `bigun-set-command-line-args`.")
+
+(defun bigun-set-command-line-args (cmd-args)
+  "Prompt for command line arguments, pre-filling with the last ones used.
+The result is stored in `bigun-command-line-args`."
+  (interactive
+   (list (read-string
+          "Enter command line args: "
+          (when (bigun-is-cmake-project)
+              (project-state-cmd-args (bigun-get-project-state (bigun-get-project-root)))))))
+  (when (bigun-is-cmake-project)
+    (let ((state (bigun-get-project-state (bigun-get-project-root))))
+      (setf (project-state-cmd-args state) cmd-args)
+      (message "Command line args set to: %s" cmd-args))))
 
 (provide 'bigun-mode)
 

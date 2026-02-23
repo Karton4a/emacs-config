@@ -215,8 +215,10 @@
 (use-package-home cc-mode
                   :mode ("\\.c\\'" . c-mode)
                   :hook ((c-mode . my/c-style-setup)
+                         (c-mode . my/ff-search-directories)
                          (c++-mode . my/c-style-setup)
-                         (c++-mode . my/cpp-syntax-tweaks))
+                         (c++-mode . my/cpp-syntax-tweaks)
+                         (c++-mode . my/cpp-ff-setup))
                   :init
                   (defun my/c-style-setup ()
                     (c-set-style "stroustrup")
@@ -232,6 +234,18 @@
                   
                   (defun my/cpp-syntax-tweaks ()
                     (modify-syntax-entry ?_ "w"))
+                  (defun my/ff-search-directories ()
+                    (setq-local ff-search-directories
+                                '("." "./include" "../" "../src" "../include")))
+                  
+                  (defun my/cpp-ff-setup ()
+                    "Set ff-other-file-alist and ff-search-directories for C++ projects."
+                    (setq-local ff-other-file-alist
+                                '(("\\.cpp\\'" (".h" ".hpp"))
+                                  ("\\.h\\'"   (".cpp" ".tpp" ".cc"))
+                                  ("\\.hpp\\'" (".cpp" ".cc" ".tpp"))
+                                  ("\\.tpp\\'" (".h" ".hpp"))))
+                    (my/ff-search-directories))
 
                   :custom
                   (c-default-style '((c-mode . "stroustrup")

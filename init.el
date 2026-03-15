@@ -111,6 +111,13 @@
       nov-unzip-args '("-xC" directory "-xf" filename))
 (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
 
+(setq gdb-many-windows t)
+(setq gdb-show-tooltip t)
+(set-fringe-style '(20 . nil))
+(add-hook 'gdb-mode-hook
+          (lambda ()
+            (set-window-fringes (selected-window) 20 nil)))
+
 (use-package dired
   :ensure nil
   :custom ((dired-listing-switches "-agho --group-directories-first")))

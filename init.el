@@ -435,7 +435,10 @@
 (global-set-key (kbd "C-v") 'clipboard-yank)
 ;;(global-set-key (kbd "C-v") 'isearch-yank-kill)
 
+(global-set-key (kbd "C-k") 'kill-whole-line)
+(global-set-key (kbd "C-k") 'kill-whole-line)
 (global-set-key (kbd "C-y") 'my-line-save)
+(global-set-key (kbd "M-y") 'kill-region)
 (global-set-key (kbd "C-z") 'undo)
 (global-set-key (kbd "C-r") 'counsel-rg)
 

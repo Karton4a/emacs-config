@@ -352,7 +352,7 @@
   :ensure t
   :bind (("C->"         . mc/mark-next-like-this)
          ("C-<"         . mc/mark-previous-like-this)
-         ("C-c C-<"     . mc/mark-all-like-this)))
+         ("C-c C-,"     . mc/mark-all-like-this)))
 
 (global-unset-key (kbd "M-<down-mouse-1>"))
 (global-set-key   (kbd "M-<mouse-1>") 'mc/add-cursor-on-click)
@@ -405,14 +405,6 @@
 
 ;; Keybinding
 
-(defun paste-without-indent ()
-  (interactive)
-  (if (region-active-p)
-      (let ((electric-indent-mode nil))
-	    (clipboard-yank))
-    (clipboard-yank)
-    )) ;; Paste
-
 ;; TODO write function that paste without indent only in selection
 (electric-indent-mode -1) ;; disable automatic indentaion for actions
 (global-set-key (kbd "RET") 'newline-and-indent)
@@ -428,25 +420,18 @@
 (defun my-line-save ()
   (interactive)
   (if (region-active-p)
-      (clipboard-kill-ring-save (region-beginning) (region-end))
+      (kill-ring-save (region-beginning) (region-end))
     (let ((start (line-beginning-position))
           (end (line-end-position)))
-      (clipboard-kill-ring-save start end))))
-
-(defun delete-current-line ()
-  "Delete the current line without copying it to the kill ring."
-  (interactive)
-  (delete-region (line-beginning-position) (line-end-position))
-  (delete-char 1)) ;; Removes the newline character
+      (kill-ring-save start end))))
 
 (global-set-key (kbd "C-v") 'clipboard-yank)
-;;(global-set-key (kbd "C-v") 'isearch-yank-kill)
 
 (global-set-key (kbd "C-k") 'kill-whole-line)
 (global-set-key (kbd "C-y") 'my-line-save)
 (global-set-key (kbd "M-y") 'kill-region)
 (global-set-key (kbd "C-z") 'undo)
-(global-set-key (kbd "C-r") 'counsel-rg)
+;; (global-set-key (kbd "C-r") 'counsel-rg)
 
 (global-set-key (kbd "<mouse-4>") 'my-line-save)
 (global-set-key (kbd "<mouse-5>") 'clipboard-yank)
@@ -498,31 +483,14 @@
   (interactive "p")
   (forward-same-syntax (- (or n 1))))
 
-
-;; (global-set-key (kbd "C-w") 'jump-to-next-word)
-;; (global-set-key (kbd "C-q") 'jump-to-previous-word)
-
-(global-set-key (kbd "C-r") 'backward-char)
 (global-set-key (kbd "C-q") 'backward-same-syntax)
 (global-set-key (kbd "C-w") 'forward-same-syntax)
 
 (global-set-key (kbd "C-<right>") 'jump-to-next-word)
 (global-set-key (kbd "C-<left>") 'jump-to-previous-word)
 
-(defun select-line ()
-  "Select line under cursor"
-  (interactive)
-  (move-beginning-of-line nil)
-  (set-mark-command nil)
-  (move-end-of-line nil))
-
-(global-set-key (kbd "C-c l") 'select-line)
-(global-set-key (kbd "C-c w") 'select-word-under-cursor)
-(global-set-key (kbd "C-c d") 'delete-current-line)
-
 (global-set-key (kbd "C-x c") 'compile)
 (global-set-key (kbd "M-s M-s") 'isearch-forward)
-;; (global-set-key (kbd "C-c u") 'uncomment-region
 (global-unset-key (kbd "C-x C-c"))
 
 (global-set-key (kbd "C-M-0") 'sp-forward-slurp-sexp)
@@ -535,11 +503,3 @@
 
 (when (eq init-config 'HOME)
   (global-set-key (kbd "C-x p a") 'ff-find-other-file))
-
-(defun select-word-under-cursor ()
-  "Select the word under the cursor."
-  (interactive)
-  (skip-chars-backward "[:word:]")
-  (set-mark-command nil)
-  (skip-chars-forward "[:word:]"))
-(put 'upcase-region 'disabled nil)

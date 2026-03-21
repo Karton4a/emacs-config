@@ -426,6 +426,7 @@
       (kill-ring-save start end))))
 
 (global-set-key (kbd "C-v") 'clipboard-yank)
+(global-set-key (kbd "M-v") 'yank-pop)
 
 (global-set-key (kbd "C-k") 'kill-whole-line)
 (global-set-key (kbd "C-y") 'my-line-save)
@@ -483,8 +484,19 @@
   (interactive "p")
   (forward-same-syntax (- (or n 1))))
 
-(global-set-key (kbd "C-q") 'backward-same-syntax)
-(global-set-key (kbd "C-w") 'forward-same-syntax)
+;; (global-set-key (kbd "C-q") 'backward-same-syntax)
+;; (global-set-key (kbd "C-w") 'forward-same-syntax)
+
+(defun my-forward-word-strictly ()
+  (interactive)
+  (forward-word-strictly 1))
+
+(defun my-backward-word-strictly ()
+  (interactive)
+  (backward-word-strictly 1))
+
+(global-set-key (kbd "C-q") #'my-backward-word-strictly)
+(global-set-key (kbd "C-w") #'my-forward-word-strictly)
 
 (global-set-key (kbd "C-<right>") 'jump-to-next-word)
 (global-set-key (kbd "C-<left>") 'jump-to-previous-word)

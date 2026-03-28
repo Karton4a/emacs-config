@@ -94,18 +94,6 @@
 (set-face-attribute 'font-lock-number-face nil
                     :foreground "#c0965b")
 
-;; (set-face-attribute 'lsp-face-semhl-property nil
-;;                     :foreground "#ff7f86")
-
-;;lsp-face-semhl-property
-
-;; (use-package modus-themes
-;;   :config
-;;   (load-theme 'modus-vivendi t)
-;;   (setq treesit-font-lock-level 4)
-;;   (set-face-attribute 'font-lock-variable-name-face nil
-;;                       :foreground "#ffffff"))
-
 
 (setq nov-unzip-program (executable-find "tar")
       nov-unzip-args '("-xC" directory "-xf" filename))
@@ -159,7 +147,7 @@
                   :init
                   (setq rust-mode-treesitter-derive t)
                   :mode "\\.rs\\'"
-                  :hook (rust-mode . lsp)
+                  :hook (rust-mode . eglot-ensure)
                   :bind (("<f5>" . cargo-process-run)
                          ("<f6>" . cargo-process-build))
                   :config
@@ -177,20 +165,12 @@
                   :hook (rust-ts-mode . cargo-minor-mode))
 
 ;; Add LSP support
-(use-package lsp-mode
+(use-package eglot
   :ensure t
-                                        ;:hook ((rust-mode . lsp))
-  :commands lsp
+  :bind (("C-c g g" . xref-find-definitions)
+         ("C-c r r" . eglot-rename))
   :config
-  (setq lsp-prefer-flymake nil)  ;; Use flycheck instead of flymake
-  (setq gc-cons-threshold 100000000)
-  (setq read-process-output-max (* 3 1024 1024))
-  (setq lsp-enable-on-type-formatting nil)
-  (setq lsp-enable-indentation nil))
-
-(use-package lsp-ivy
-  :ensure t
-  :bind ("C-t" . lsp-ivy-workspace-symbol))
+  (add-hook 'eglot-managed-mode-hook (lambda () (eglot-inlay-hints-mode -1))))
 
 (use-package drag-stuff
   :ensure t
@@ -232,11 +212,12 @@
                     (setq c-basic-offset 4)
                     (c-set-offset 'substatement-open 0)
                     (modify-syntax-entry ?_ "w")
-                    (lsp)
-                    (when (bound-and-true-p lsp-mode)
-                      (setq lsp-semantic-tokens-enable t)
-                      (set-face-attribute 'lsp-face-semhl-property nil
-                                          :foreground "#ff7f86"))
+                    (eglot-ensure)
+                    ;; (lsp)
+                    ;; (when (bound-and-true-p lsp-mode)
+                    ;;   (setq lsp-semantic-tokens-enable t)
+                    ;;   (set-face-attribute 'lsp-face-semhl-property nil
+                    ;;                       :foreground "#ff7f86"))
                     (local-set-key (kbd "C-c f") 'prykra-c))
                   
                   (defun my/cpp-syntax-tweaks ()
@@ -282,25 +263,7 @@
                                       ;;(eglot-ensure)
                                       ;; (flycheck-mode -1)
                                       (modify-syntax-entry ?_ "w")
-                                      (global-set-key (kbd "<f5>") 'compile)))
-                  :config
-                  (setq lsp-pylsp-server-command "pylsp")
-                  (setq
-                   ;; Disable style and linting plugins
-                   lsp-pylsp-plugins-pylint-enabled nil
-                   lsp-pylsp-plugins-pycodestyle-enabled nil
-                   lsp-pylsp-plugins-pydocstyle-enabled nil
-                   lsp-pylsp-plugins-flake8-enabled nil
-                   lsp-pylsp-plugins-mccabe-enabled nil
-                   lsp-pylsp-plugins-ruff-enabled nil
-                   lsp-pylsp-plugins-mypy-enabled nil
-
-                   ;; Optional: Disable type inference and formatting
-                   lsp-pylsp-plugins-jedi-enabled nil
-                   lsp-pylsp-plugins-autopep8-enabled nil
-                   lsp-pylsp-plugins-black-enabled nil
-                   lsp-pylsp-plugins-yapf-enabled nil
-                   ))
+                                      (global-set-key (kbd "<f5>") 'compile))))
 
 
 (use-package swiper
@@ -448,8 +411,6 @@
   (setq w32-pass-lwindow-to-system nil
         w32-lwindow-modifier 'super) ;; Menu key
   (w32-register-hot-key [s-]))
-
-(setq lsp-keymap-prefix "C-c")
 
 ;; (defun my-start-selection-and-forward-word ()
 ;;   "Start selection and move forward by one word."

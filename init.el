@@ -170,7 +170,11 @@
   :bind (("C-c g g" . xref-find-definitions)
          ("C-c r r" . eglot-rename))
   :config
-  (add-hook 'eglot-managed-mode-hook (lambda () (eglot-inlay-hints-mode -1))))
+  (add-hook 'eglot-managed-mode-hook (lambda () (eglot-inlay-hints-mode -1)))
+  (custom-set-faces
+   '(eglot-highlight-symbol-face ((t (:inherit bold :background "dim gray"))))
+   '(eglot-semantic-declaration ((t nil)))
+   '(eglot-semantic-definition ((t nil)))))
 
 (use-package drag-stuff
   :ensure t

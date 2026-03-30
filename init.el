@@ -1,13 +1,3 @@
-(defmacro use-package-work (package &rest args)
-  "Expand to `(when (eq init-config 'WORK) (use-package PACKAGE ARGS...))`."
-  `(when (eq init-config 'WORK)
-     (use-package ,package ,@args)))
-
-(defmacro use-package-home (package &rest args)
-  "Expand to `(when (eq init-config 'WORK) (use-package PACKAGE ARGS...))`."
-  `(when (eq init-config 'HOME)
-     (use-package ,package ,@args)))
-
 ;; Set up package management
 (require 'package)
 (setq package-archives '(("melpa" . "https://melpa.org/packages/")
@@ -22,17 +12,10 @@
 (require 'use-package)
 (setq use-package-always-ensure t)
 
-(condition-case err
-    (load "~/.emacs.d/config-settings")
-  (error
-   (setq init-config 'HOME)))
-
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
-(when (eq init-config 'WORK)
-  (setq default-directory "D:/TR11/"))
 
-(when (eq init-config 'HOME)
-  (setq default-directory "~/"))
+
+(setq default-directory "~/")
 
 ;; Basic UI tweaks
 (menu-bar-mode -1)           ;; Disable the menu bar
@@ -67,18 +50,23 @@
 (global-auto-revert-mode 1)
 (delete-selection-mode 1)
 (add-hook 'post-self-insert-hook (lambda() (electric-pair-post-self-insert-function) (indent-according-to-mode)))
+
 (setq-default indent-tabs-mode nil) ;; disable tab for indent
 (setq-default tab-width 4)
-(setq compilation-scroll-output t)
 
-(when (eq init-config 'WORK)
-  (set-terminal-coding-system 'utf-8)
-  (set-language-environment 'utf-8)
-  (set-keyboard-coding-system 'utf-8)
-  (prefer-coding-system 'utf-8)
-  (setq locale-coding-system 'utf-8)
-  (set-default-coding-systems 'utf-8)
-  (set-terminal-coding-system 'utf-8))
+(use-package go-ts-mode
+  :mode ("\\.go\\'" . go-ts-mode)
+  :hook (go-ts-mode . eglot-ensure)
+  :config
+  (setq indent-tabs-mode nil
+        go-ts-mode-indent-offset 4))
+
+;; (with-eval-after-load 'go-ts-mode
+;;   (add-hook 'go-ts-mode-hook (lambda ()
+;;                             (setq indent-tabs-mode nil)
+;;                             (setq go-ts-mode-indent-offset 4))))
+
+(setq compilation-scroll-output t)
 
 ;;(setq split-width-threshold nil)
 (setq split-height-threshold 0)
@@ -146,7 +134,7 @@
   (add-hook 'after-init-hook 'global-company-mode)
   (setq company-backends (remove 'company-clang company-backends)))
 
-(use-package-home rust-mode
+(use-package rust-mode
                   :ensure t
                   :init
                   (setq rust-mode-treesitter-derive t)
@@ -164,7 +152,7 @@
                   (setq treesit-font-lock-level 4))
 
 ;; Optionally, add cargo-mode for managing Rust projects
-(use-package-home cargo
+(use-package cargo
                   :ensure t
                   :hook (rust-ts-mode . cargo-minor-mode))
 
@@ -196,107 +184,91 @@
 (add-to-list 'load-path "~/.emacs.d/prykra-c/")
 (add-to-list 'load-path "~/.emacs.d/bigun/")
 
-(use-package-home prykra-c
-                  :ensure nil)
+(use-package prykra-c
+  :ensure nil)
 
-(use-package-home bigun-mode
-                  :ensure nil
-                  :bind (("<f5>" . bigun-build-and-run)
-                         ("<f6>" . bigun-build))
-                  :config
-                  (bigun-restore-project-state)
-                  (bigun-global-mode 1))
+(use-package bigun-mode
+  :ensure nil
+  :bind (("<f5>" . bigun-build-and-run)
+         ("<f6>" . bigun-build))
+  :config
+  (bigun-restore-project-state)
+  (bigun-global-mode 1))
 
-(use-package-home cc-mode
-                  :mode ("\\.c\\'" . c-mode)
-                  :hook ((c-mode . my/c-style-setup)
-                         (c-mode . my/ff-search-directories)
-                         (c++-mode . my/c-style-setup)
-                         (c++-mode . my/cpp-syntax-tweaks)
-                         (c++-mode . my/cpp-ff-setup))
-                  :init
-                  (defun my/c-style-setup ()
-                    (c-set-style "stroustrup")
-                    (setq c-basic-offset 4)
-                    (c-set-offset 'substatement-open 0)
-                    (modify-syntax-entry ?_ "w")
-                    (eglot-ensure)
-                    ;; (lsp)
-                    ;; (when (bound-and-true-p lsp-mode)
-                    ;;   (setq lsp-semantic-tokens-enable t)
-                    ;;   (set-face-attribute 'lsp-face-semhl-property nil
-                    ;;                       :foreground "#ff7f86"))
-                    (local-set-key (kbd "C-c f") 'prykra-c))
-                  
-                  (defun my/cpp-syntax-tweaks ()
-                    (modify-syntax-entry ?_ "w"))
-                  (defun my/ff-search-directories ()
-                    (setq-local ff-search-directories
-                                '("." "./include" "../" "../src" "../include")))
-                  
-                  (defun my/cpp-ff-setup ()
-                    "Set ff-other-file-alist and ff-search-directories for C++ projects."
-                    (setq-local ff-other-file-alist
-                                '(("\\.cpp\\'" (".h" ".hpp"))
-                                  ("\\.h\\'"   (".cpp" ".tpp" ".cc"))
-                                  ("\\.hpp\\'" (".cpp" ".cc" ".tpp"))
-                                  ("\\.tpp\\'" (".h" ".hpp"))))
-                    (my/ff-search-directories))
+(use-package cc-mode
+  :mode ("\\.c\\'" . c-mode)
+  :hook ((c-mode . my/c-style-setup)
+         (c-mode . my/ff-search-directories)
+         (c++-mode . my/c-style-setup)
+         (c++-mode . my/cpp-syntax-tweaks)
+         (c++-mode . my/cpp-ff-setup))
+  :init
+  (defun my/c-style-setup ()
+    (c-set-style "stroustrup")
+    (setq c-basic-offset 4)
+    (c-set-offset 'substatement-open 0)
+    (modify-syntax-entry ?_ "w")
+    (eglot-ensure)
+    ;; (lsp)
+    ;; (when (bound-and-true-p lsp-mode)
+    ;;   (setq lsp-semantic-tokens-enable t)
+    ;;   (set-face-attribute 'lsp-face-semhl-property nil
+    ;;                       :foreground "#ff7f86"))
+    (local-set-key (kbd "C-c f") 'prykra-c))
+  
+  (defun my/cpp-syntax-tweaks ()
+    (modify-syntax-entry ?_ "w"))
+  (defun my/ff-search-directories ()
+    (setq-local ff-search-directories
+                '("." "./include" "../" "../src" "../include")))
+  
+  (defun my/cpp-ff-setup ()
+    "Set ff-other-file-alist and ff-search-directories for C++ projects."
+    (setq-local ff-other-file-alist
+                '(("\\.cpp\\'" (".h" ".hpp"))
+                  ("\\.h\\'"   (".cpp" ".tpp" ".cc"))
+                  ("\\.hpp\\'" (".cpp" ".cc" ".tpp"))
+                  ("\\.tpp\\'" (".h" ".hpp"))))
+    (my/ff-search-directories))
 
-                  :custom
-                  (c-default-style '((c-mode . "stroustrup")
-                                     (c++-mode . "stroustrup"))))
-
-
-(use-package-work counsel-projectile
-                  :ensure t)
-
-(use-package-work projectile
-                  :ensure t
-                  :hook ((counsel-projectile-mode))
-                  :config
-                  (projectile-mode +1)
-                  ;; Recommended keymap prefix on Windows/Linux
-                  (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
-                  (setq projectile-indexing-method 'alien))
+  :custom
+  (c-default-style '((c-mode . "stroustrup")
+                     (c++-mode . "stroustrup"))))
 
 
-(use-package-home python
-                  :mode ("\\.py\\'" . python-ts-mode)
-                  :hook
-                  ;;(python-mode . lsp)
-                  
-                  (python-ts-mode . (lambda ()
-                                      ;; (lsp)
-                                      ;;(eglot-ensure)
-                                      ;; (flycheck-mode -1)
-                                      (modify-syntax-entry ?_ "w")
-                                      (global-set-key (kbd "<f5>") 'compile))))
-
+(use-package python
+  :mode ("\\.py\\'" . python-ts-mode)
+  :hook
+  ;;(python-mode . lsp)
+  
+  (python-ts-mode . (lambda ()
+                      ;; (lsp)
+                      ;;(eglot-ensure)
+                      ;; (flycheck-mode -1)
+                      (modify-syntax-entry ?_ "w")
+                      (global-set-key (kbd "<f5>") 'compile))))
 
 (use-package swiper
   :ensure t
   :bind ("C-s" . swiper))
 
-(use-package-work deadgrep
-                  :ensure t
-                  :bind ("<f4>" . deadgrep))
+(use-package deadgrep
+  :ensure t
+  :bind ("<f4>" . deadgrep)
+  :config
+  (setq deadgrep-display-buffer-function
+		(lambda (buffer &rest _)
+		  (display-buffer-same-window buffer nil))))
 
-(when (eq init-config 'WORK)
-  (with-eval-after-load 'deadgrep
-	(setq deadgrep-display-buffer-function
-		  (lambda (buffer &rest _)
-			(display-buffer-same-window buffer nil)))))
-
-(use-package-home magit
-                  :defer t
-                  :ensure t)
+(use-package magit
+  :defer t
+  :ensure t)
 
 (use-package snap-indent
   :hook (prog-mode . snap-indent-mode))
 
-(use-package-home cmake-mode
-                  :ensure t)
+(use-package cmake-mode
+  :ensure t)
 
 (use-package gptel
   :ensure t
@@ -328,51 +300,10 @@
 (global-unset-key (kbd "M-<down-mouse-1>"))
 (global-set-key   (kbd "M-<mouse-1>") 'mc/add-cursor-on-click)
 
-(use-package-work p4
-                  :ensure t)
-
-(use-package-home sly
-                  :ensure t
-                  :config
-                  (setq inferior-lisp-program "sbcl.exe --dynamic-space-size 4096"))
-
-(when (eq init-config 'WORK)
-  (add-to-list 'auto-mode-alist '("\\.nxshader\\'" . c-mode))
-  (add-to-list 'auto-mode-alist '("\\.inc\\'" . c-mode))
-  (add-to-list 'auto-mode-alist '("\\.shadernode\\'" . c-mode))
-  (add-to-list 'auto-mode-alist '("\\.genHLSL\\'" . c-mode)))
-
-
-(when (eq init-config 'WORK)
-  (defun my/c-ts-indent-style ()
-	"Custom indentation style for c++-ts-mode based on Microsoft style."
-	`(;; No indentation for namespace children
-      ;; ((n-p-gp nil nil "namespace_definition") grand-parent 0)
-      ;; Align function parameters to the first parameter
-      ((match nil "parameter_list" nil 1 1) parent-bol c-ts-mode-indent-offset)
-      ((match nil "parameter_list" nil 2 nil) (nth-sibling 1) 0)
-      ((match nil "argument_list" nil 1 1) parent-bol c-ts-mode-indent-offset)
-      ((match nil "argument_list" nil 2 nil) (nth-sibling 1) 0)
-      ;; No extra indent for case statements
-      ((parent-is "case_statement") standalone-parent c-ts-mode-indent-offset)
-      ;; No indent for preprocessor directives
-      ((node-is "preproc") column-0 0)
-      ;; Braces on same line (handled by default, but ensure no extra indent)
-      ((node-is "}") parent-bol 0)
-      ((node-is ")") parent-bol 0)
-      ;; Append BSD style as a base
-      ,@(alist-get 'bsd (c-ts-mode--indent-styles 'cpp))))
-
-  (use-package c-ts-mode
-	:ensure nil ;; Built-in to Emacs 29+
-	:hook ((c++-ts-mode . lsp))
-	:custom
-	(c-ts-mode-indent-offset 4) ;; 4 spaces for indentation
-	(indent-tabs-mode t) ;; Use tabs
-	(c-ts-mode-indent-style #'my/c-ts-indent-style)
-	:init
-	;; Remap C++ mode to use Tree-sitter
-	(add-to-list 'major-mode-remap-alist '(c++-mode . c++-ts-mode))))
+(use-package sly
+  :ensure t
+  :config
+  (setq inferior-lisp-program "sbcl.exe --dynamic-space-size 4096"))
 
 ;; Keybinding
 
@@ -482,5 +413,4 @@
 (global-set-key (kbd "M-f") 'sp-forward-sexp)
 (global-set-key (kbd "M-b") 'sp-backward-sexp)
 
-(when (eq init-config 'HOME)
-  (global-set-key (kbd "C-x p a") 'ff-find-other-file))
+(global-set-key (kbd "C-x p a") 'ff-find-other-file)

@@ -106,6 +106,10 @@
           (lambda ()
             (set-window-fringes (selected-window) 20 nil)))
 
+(use-package transpose-frame
+  :ensure t
+  :bind (("C-x t" . transpose-frame)))
+
 (use-package dired
   :ensure nil
   :custom ((dired-listing-switches "-agho --group-directories-first")))

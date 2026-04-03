@@ -166,7 +166,11 @@
   (custom-set-faces
    '(eglot-highlight-symbol-face ((t (:inherit bold :background "dim gray"))))
    '(eglot-semantic-declaration ((t nil)))
-   '(eglot-semantic-definition ((t nil)))))
+   '(eglot-semantic-definition ((t nil))))
+  :custom
+  (eglot-ignored-server-capabilities
+   '(:documentRangeFormattingProvider
+     :documentOnTypeFormattingProvider)))
 
 (use-package drag-stuff
   :ensure t

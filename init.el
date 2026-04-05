@@ -301,6 +301,11 @@
          ("C-<"         . mc/mark-previous-like-this)
          ("C-c C-,"     . mc/mark-all-like-this)))
 
+(use-package multiple-cursors-core
+  :ensure nil
+  :bind (:map mc/keymap
+              ("C-v" . nil)))
+
 (global-unset-key (kbd "M-<down-mouse-1>"))
 (global-set-key   (kbd "M-<mouse-1>") 'mc/add-cursor-on-click)
 

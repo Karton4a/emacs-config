@@ -54,6 +54,10 @@
 (setq-default indent-tabs-mode nil) ;; disable tab for indent
 (setq-default tab-width 4)
 
+(setq redisplay-skip-fontification-on-input t)
+(setq read-process-output-max (* 4 1024 1024)) ; 4MB
+(setq save-interprogram-paste-before-kill t)
+(setq kill-do-not-save-duplicates t)
 (use-package go-ts-mode
   :mode ("\\.go\\'" . go-ts-mode)
   :hook (go-ts-mode . eglot-ensure)
